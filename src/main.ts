@@ -21,13 +21,13 @@ async function bootstrap() {
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: `gs1-registry-sync-${uuidv4()}`,
+            clientId: `gs1-notifications-${uuidv4()}`,
             brokers: (process.env.KAFKA_BROKERS || '')
               .split(',')
               .filter((a) => a),
           },
           consumer: {
-            groupId: 'gs1-registry-sync',
+            groupId: 'gs1-notifications',
           },
         },
         bufferLogs: true,
