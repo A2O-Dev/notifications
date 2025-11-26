@@ -25,9 +25,9 @@ RUN npm install pm2 --location=global
 
 COPY --from=builder /app/dist ./
 
-RUN adduser --disabled-password gs1-notifications
-RUN chown -R gs1-notifications:gs1-notifications ./
-USER gs1-notifications
+RUN adduser --disabled-password notifications
+RUN chown -R notifications:notifications ./
+USER notifications
 
 EXPOSE 3000
 

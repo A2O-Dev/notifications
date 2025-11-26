@@ -1,29 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gs1-notifications-db
-  namespace: gs1
+  name: notifications-db
+  namespace: notifications
   labels:
-    project: gs1
-    service: gs1-notifications
+    project: notifications
+    service: notifications
     type: db
 spec:
   replicas: 2
   selector:
     matchLabels:
-      project: gs1
-      service: gs1-notifications
+      project: notifications
+      service: notifications
       type: db
   template:
     metadata:
       labels:
-        project: gs1
-        service: gs1-notifications
+        project: notifications
+        service: notifications
         type: db
     spec:
       automountServiceAccountToken: false
       containers:
-        - name: gs1-notifications-db
+        - name: notifications-db
           image: postgres:16.3-alpine
           resources:
             requests:
@@ -35,7 +35,7 @@ spec:
               ephemeral-storage: 5Gi
           envFrom:
             - secretRef:
-                name: gs1-notifications
+                name: notifications
           volumeMounts:
             - name: persistent-volume
               mountPath: /var/lib/postgresql/data
@@ -45,4 +45,4 @@ spec:
       volumes:
         - name: persistent-volume
           persistentVolumeClaim:
-            claimName: gs1-notifications
+            claimName: notifications

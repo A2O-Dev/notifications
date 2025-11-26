@@ -1,55 +1,74 @@
 import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { ClientsModule, Transport } from '@nestjs/microservices'
-import { v4 as uuidv4 } from 'uuid'
+import { ScheduleModule } from '@nestjs/schedule'
+import { MailerModule } from '@nestjs-modules/mailer'
+import _ = require('lodash')
 
+import { database } from './config'
 import { LoggerModule } from './logger/logger.module'
-import { AppController } from './app.controller'
-import { databaseOptions } from './config'
+import { MessageModule } from './message/message.module'
+import { KafkaModule } from './kafka/kafka.module'
+import { EmailModule } from './email/email.module'
+import { SystemModule } from './system/system.module'
+import { HealthModule } from './health/health.module'
+import { WhatsappModule } from './whatsapp/whatsapp.module'
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
-    TypeOrmModule.forRoot({
-      ...databaseOptions,
-      autoLoadEntities: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      expandVariables: true,
+      load: [database],
     }),
-    (() => {
-      const clients = []
-
-      let kafkaClient: any = {
-        name: 'KAFKA_CLIENT',
-        transport: Transport.KAFKA,
-      }
-
-      let options = null
-      if ((process.env.KAFKA_ENABLED ?? 'true') === 'true') {
-        options = {
-          client: {
-            clientId: `gs1-notifications-${uuidv4()}`,
-            brokers: (process.env.KAFKA_BROKERS || '')
-              .split(',')
-              .filter((a) => a),
-          },
-          consumer: {
-            groupId: 'gs1-notifications',
-          },
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        ...(await configService.get('database')),
+        autoLoadEntities: true,
+      }),
+    }),
+    ScheduleModule.forRoot(),
+    MailerModule.forRootAsync({
+      useFactory: async () => {
+        const transport: any = {
+          host: process.env.MAIL_HOST,
+          port: +process.env.MAIL_PORT,
+          secure: process.env.MAIL_SECURE,
         }
-      }
 
-      if (options !== null) {
-        kafkaClient = {
-          ...kafkaClient,
-          options,
+        const mailUser = process.env.MAIL_USERNAME
+        if (mailUser && !_.isEmpty(mailUser) && !_.isNull(mailUser)) {
+          transport.auth = {
+            user: mailUser,
+          }
         }
-      }
 
-      clients.push(kafkaClient)
-      return ClientsModule.register(clients)
-    })(),
+        const mailPassword = process.env.MAIL_PASSWORD
+        if (
+          mailPassword &&
+          !_.isEmpty(mailPassword) &&
+          !_.isNull(mailPassword)
+        ) {
+          transport.auth = {
+            ...transport.auth,
+            pass: mailPassword,
+          }
+        }
+
+        return {
+          transport,
+        }
+      },
+    }),
+    KafkaModule,
     LoggerModule,
+    MessageModule,
+    EmailModule,
+    SystemModule,
+    HealthModule,
+    WhatsappModule,
   ],
-  controllers: [AppController],
 })
 export class AppModule {}
